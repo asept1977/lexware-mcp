@@ -2,7 +2,7 @@ import type { McpServer } from "skybridge/server";
 import { z } from "zod";
 import type { LexwareClient } from "../lexware/client.js";
 import { pageParam, sizeParam } from "./schemas.js";
-import { RO, text } from "./shared.js";
+import { RO, structuredResult } from "./shared.js";
 
 /**
  * Read-only reference + supporting data. Always registered.
@@ -13,10 +13,7 @@ export function registerReferenceReadTools(server: McpServer, client: LexwareCli
   const simpleGet = (name: string, path: string, description: string) =>
     server.registerTool({ name, description, annotations: RO }, async () => {
       const data = await client.get<unknown>(path);
-      return {
-        structuredContent: { data },
-        content: text(`Retrieved ${name.replace(/^get-/, "")}.`),
-      };
+      return structuredResult({ data }, `Retrieved ${name.replace(/^get-/, "")}.`);
     });
 
   simpleGet("get-countries", "/v1/countries", "List countries with tax classification data.");
@@ -37,7 +34,7 @@ export function registerReferenceReadTools(server: McpServer, client: LexwareCli
     },
     async ({ id }) => {
       const payment = await client.get<Record<string, unknown>>(`/v1/payments/${encodeURIComponent(id)}`);
-      return { structuredContent: payment, content: text(`Payment info for ${id} retrieved.`) };
+      return structuredResult(payment, `Payment info for ${id} retrieved.`);
     },
   );
 
@@ -50,7 +47,7 @@ export function registerReferenceReadTools(server: McpServer, client: LexwareCli
     },
     async ({ id }) => {
       const tmpl = await client.get<Record<string, unknown>>(`/v1/recurring-templates/${encodeURIComponent(id)}`);
-      return { structuredContent: tmpl, content: text(`Recurring template ${id} retrieved.`) };
+      return structuredResult(tmpl, `Recurring template ${id} retrieved.`);
     },
   );
 
@@ -66,7 +63,7 @@ export function registerReferenceReadTools(server: McpServer, client: LexwareCli
     },
     async ({ page, size }) => {
       const data = await client.get<unknown>("/v1/recurring-templates", { page, size });
-      return { structuredContent: { data }, content: text("Retrieved recurring templates.") };
+      return structuredResult({ data }, "Retrieved recurring templates.");
     },
   );
 }
