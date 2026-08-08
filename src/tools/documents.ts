@@ -15,7 +15,7 @@ import {
   quotationInputShape,
   sizeParam,
 } from "./schemas.js";
-import { LOCAL_RO, RO, WRITE, binaryResult, pagedResult, text } from "./shared.js";
+import { LOCAL_RO, RO, WRITE, binaryResult, pagedResult, structuredResult } from "./shared.js";
 
 /** A Lexware voucher-document type and how to create it. */
 interface DocType {
@@ -245,29 +245,28 @@ export function registerDocumentReadTools(
       const currency = currencyOf(allCurrencies);
       const grandTotal = round2(groupList.reduce((s, g) => s + g.sumTotalAmount, 0));
       const grandOpen = round2(groupList.reduce((s, g) => s + g.sumOpenAmount, 0));
-      return {
-        structuredContent: {
-          filters: {
-            voucherType,
-            voucherStatus,
-            contactId,
-            voucherDateFrom,
-            voucherDateTo,
-            archived,
-            groupBy,
-          },
-          scanned,
-          totalElements,
-          pagesScanned,
-          truncated,
-          grandTotal: { sumTotalAmount: grandTotal, sumOpenAmount: grandOpen, currency },
-          groups: groupList,
+      const structuredContent = {
+        filters: {
+          voucherType,
+          voucherStatus,
+          contactId,
+          voucherDateFrom,
+          voucherDateTo,
+          archived,
+          groupBy,
         },
-        content: text(
-          `Summarized ${scanned} voucher(s)${truncated ? ` (TRUNCATED at ${maxPages} pages × ${SIZE})` : ""}; ` +
-            `gross total ${currency ?? ""} ${grandTotal} across ${groupList.length} ${groupBy} group(s).`,
-        ),
+        scanned,
+        totalElements,
+        pagesScanned,
+        truncated,
+        grandTotal: { sumTotalAmount: grandTotal, sumOpenAmount: grandOpen, currency },
+        groups: groupList,
       };
+      return structuredResult(
+        structuredContent,
+        `Summarized ${scanned} voucher(s)${truncated ? ` (TRUNCATED at ${maxPages} pages × ${SIZE})` : ""}; ` +
+          `gross total ${currency ?? ""} ${grandTotal} across ${groupList.length} ${groupBy} group(s).`,
+      );
     },
   );
 
@@ -282,7 +281,7 @@ export function registerDocumentReadTools(
       },
       async ({ id }) => {
         const document = await client.get<Record<string, unknown>>(`/v1/${doc.path}/${encodeURIComponent(id)}`);
-        return { structuredContent: document, content: text(`${doc.label} ${id} retrieved.`) };
+        return structuredResult(document, `${doc.label} ${id} retrieved.`);
       },
     );
   }
@@ -323,7 +322,7 @@ export function registerDocumentReadTools(
     },
     async ({ id }) => {
       const voucher = await client.get<Record<string, unknown>>(`/v1/vouchers/${encodeURIComponent(id)}`);
-      return { structuredContent: voucher, content: text(`Voucher ${id} retrieved.`) };
+      return structuredResult(voucher, `Voucher ${id} retrieved.`);
     },
   );
 
@@ -350,13 +349,11 @@ export function registerDocumentReadTools(
           errors.push({ id, error: e instanceof Error ? e.message : String(e) });
         }
       }
-      return {
-        structuredContent: { vouchers, errors, count: vouchers.length },
-        content: text(
-          `Fetched ${vouchers.length}/${(ids as string[]).length} voucher(s)` +
-            (errors.length ? `; ${errors.length} failed.` : "."),
-        ),
-      };
+      return structuredResult(
+        { vouchers, errors, count: vouchers.length },
+        `Fetched ${vouchers.length}/${(ids as string[]).length} voucher(s)` +
+          (errors.length ? `; ${errors.length} failed.` : "."),
+      );
     },
   );
 
@@ -381,7 +378,7 @@ export function registerDocumentReadTools(
         );
       }
       const doc = await client.get<Record<string, unknown>>(`/v1/${path}/${encodeURIComponent(id)}`);
-      return { structuredContent: doc, content: text(`${voucherType} ${id} retrieved via /${path}.`) };
+      return structuredResult(doc, `${voucherType} ${id} retrieved via /${path}.`);
     },
   );
 
@@ -456,7 +453,7 @@ export function registerDocumentReadTools(
     async ({ resourceType, id, action }) => {
       // Lexware permalink format: {app}/permalink/{resourceType}/{action}/{id}
       const url = `${appBaseUrl}/permalink/${resourceType}/${action}/${encodeURIComponent(id)}`;
-      return { structuredContent: { url }, content: text(`Open in Lexware: ${url}`) };
+      return structuredResult({ url }, `Open in Lexware: ${url}`);
     },
   );
 }
@@ -519,10 +516,10 @@ export function registerDocumentDraftTools(server: McpServer, client: LexwareCli
         if (precedingSalesVoucherId) query.precedingSalesVoucherId = precedingSalesVoucherId;
         const body = mergeBody(input, additionalFields);
         const created = await client.post<{ id: string }>(`/v1/${doc.path}`, body, query);
-        return {
-          structuredContent: { ...created, finalized: false },
-          content: text(`Created DRAFT ${doc.label} ${created.id} (not finalized).`),
-        };
+        return structuredResult(
+          { ...created, finalized: false },
+          `Created DRAFT ${doc.label} ${created.id} (not finalized).`,
+        );
       },
     );
   }
@@ -562,10 +559,10 @@ export function registerDocumentFinalizeTools(server: McpServer, client: Lexware
         if (precedingSalesVoucherId) query.precedingSalesVoucherId = precedingSalesVoucherId;
         const body = mergeBody(input, additionalFields);
         const created = await client.post<{ id: string }>(`/v1/${doc.path}`, body, query);
-        return {
-          structuredContent: { ...created, finalized: true },
-          content: text(`FINALIZED ${doc.label} ${created.id} (legally binding). This cannot be undone.`),
-        };
+        return structuredResult(
+          { ...created, finalized: true },
+          `FINALIZED ${doc.label} ${created.id} (legally binding). This cannot be undone.`,
+        );
       },
     );
   }
