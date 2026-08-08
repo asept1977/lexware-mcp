@@ -17,17 +17,31 @@ export function text(message: string): [{ type: "text"; text: string }] {
   return [{ type: "text", text: message }];
 }
 
+/**
+ * Return machine-readable data together with a JSON text fallback.
+ *
+ * `structuredContent` is the canonical payload for modern MCP clients. The MCP
+ * specification also recommends serializing that payload into a TextContent
+ * block for backwards compatibility. Keeping the human-readable summary as the
+ * first block preserves the existing UX, while the second block lets text-only
+ * clients consume ids, line items, amounts, and other structured fields.
+ */
+export function structuredResult<T extends object>(structuredContent: T, message: string) {
+  return {
+    structuredContent,
+    content: [...text(message), ...text(JSON.stringify(structuredContent))],
+  };
+}
+
 /** Standard result for a paged list tool: the Paged envelope + a one-line summary. */
 export function pagedResult<T>(result: Paged<T>, noun: string) {
   // An empty result set has totalPages 0; render "page 1/1" rather than the
   // self-contradictory "page 1/0".
   const totalPages = Math.max(result.totalPages, 1);
-  return {
-    structuredContent: result,
-    content: text(
-      `Found ${result.totalElements} ${noun}; showing page ${result.number + 1}/${totalPages}.`,
-    ),
-  };
+  return structuredResult(
+    result,
+    `Found ${result.totalElements} ${noun}; showing page ${result.number + 1}/${totalPages}.`,
+  );
 }
 
 /**
@@ -56,7 +70,11 @@ export function binaryResult(opts: {
 }) {
   return {
     structuredContent: opts.structuredContent,
-    content: [...text(opts.message), embeddedResourceBlock(opts.uri, opts.contentType, opts.data)],
+    content: [
+      ...text(opts.message),
+      ...text(JSON.stringify(opts.structuredContent)),
+      embeddedResourceBlock(opts.uri, opts.contentType, opts.data),
+    ],
   };
 }
 
