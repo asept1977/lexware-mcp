@@ -11,7 +11,15 @@ import {
   sizeParam,
   versionParam,
 } from "./schemas.js";
-import { DESTRUCTIVE, RO, WRITE, deepMergePatch, deleteIdempotent, pagedResult, text } from "./shared.js";
+import {
+  DESTRUCTIVE,
+  RO,
+  WRITE,
+  deepMergePatch,
+  deleteIdempotent,
+  pagedResult,
+  structuredResult,
+} from "./shared.js";
 
 /** Read tools for articles (products/services). Always registered. */
 export function registerArticleReadTools(server: McpServer, client: LexwareClient): void {
@@ -50,10 +58,7 @@ export function registerArticleReadTools(server: McpServer, client: LexwareClien
     },
     async ({ id }) => {
       const article = await client.get<Record<string, unknown>>(`/v1/articles/${encodeURIComponent(id)}`);
-      return {
-        structuredContent: article,
-        content: text(`Article ${id}: ${(article.title as string) ?? ""}`),
-      };
+      return structuredResult(article, `Article ${id}: ${(article.title as string) ?? ""}`);
     },
   );
 }
@@ -69,7 +74,7 @@ export function registerArticleWriteTools(server: McpServer, client: LexwareClie
     },
     async ({ additionalFields, ...input }) => {
       const created = await client.post<{ id: string }>("/v1/articles", mergeBody(input, additionalFields));
-      return { structuredContent: created, content: text(`Created article ${created.id}.`) };
+      return structuredResult(created, `Created article ${created.id}.`);
     },
   );
 
@@ -99,10 +104,7 @@ export function registerArticleWriteTools(server: McpServer, client: LexwareClie
         `/v1/articles/${encodeURIComponent(id)}`,
         { body, idempotent: false },
       );
-      return {
-        structuredContent: updated,
-        content: text(`Updated article ${id} (now version ${updated.version}).`),
-      };
+      return structuredResult(updated, `Updated article ${id} (now version ${updated.version}).`);
     },
   );
 }
@@ -123,10 +125,10 @@ export function registerArticleDeleteTools(server: McpServer, client: LexwareCli
     },
     async ({ id }) => {
       const { alreadyAbsent } = await deleteIdempotent(client, `/v1/articles/${encodeURIComponent(id)}`);
-      return {
-        structuredContent: { id, deleted: true, alreadyAbsent },
-        content: text(alreadyAbsent ? `Article ${id} was already absent (nothing to delete).` : `Deleted article ${id}.`),
-      };
+      return structuredResult(
+        { id, deleted: true, alreadyAbsent },
+        alreadyAbsent ? `Article ${id} was already absent (nothing to delete).` : `Deleted article ${id}.`,
+      );
     },
   );
 }
