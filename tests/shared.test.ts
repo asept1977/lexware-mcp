@@ -194,7 +194,9 @@ describe("pagedResult", () => {
 
   it("renders page 1/1 (not the impossible 1/0) for an empty result set", () => {
     const res = pagedResult(paged({}), "contact(s)");
-    expect(res.content[0].text).toBe("Found 0 contact(s); showing page 1/1.");
+    expect(res.content[0].text).toBe(
+      `Found 0 contact(s); showing page 1/1.\n\n${JSON.stringify(paged({}))}`,
+    );
   });
 
   it("renders the real 1-based page/total for a populated set", () => {
@@ -206,8 +208,9 @@ describe("pagedResult", () => {
       totalElements: 70,
     });
     const res = pagedResult(page, "article(s)");
-    expect(res.content[0].text).toBe("Found 70 article(s); showing page 2/3.");
-    expect(JSON.parse(res.content[1].text)).toEqual(page);
+    expect(res.content[0].text).toBe(
+      `Found 70 article(s); showing page 2/3.\n\n${JSON.stringify(page)}`,
+    );
   });
 });
 
@@ -218,8 +221,7 @@ describe("structuredResult", () => {
 
     expect(res.structuredContent).toEqual(payload);
     expect(res.content).toEqual([
-      { type: "text", text: "Contact retrieved." },
-      { type: "text", text: JSON.stringify(payload) },
+      { type: "text", text: `Contact retrieved.\n\n${JSON.stringify(payload)}` },
     ]);
   });
 });
@@ -234,9 +236,11 @@ describe("binaryResult", () => {
       structuredContent: { fileId: "f1" },
       message: "Downloaded file f1.",
     });
-    expect(res.content[0]).toEqual({ type: "text", text: "Downloaded file f1." });
-    expect(res.content[1]).toEqual({ type: "text", text: JSON.stringify({ fileId: "f1" }) });
-    expect(res.content[2]).toEqual({
+    expect(res.content[0]).toEqual({
+      type: "text",
+      text: `Downloaded file f1.\n\n${JSON.stringify({ fileId: "f1" })}`,
+    });
+    expect(res.content[1]).toEqual({
       type: "resource",
       resource: {
         uri: "lexware://files/f1",
