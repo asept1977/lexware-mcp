@@ -13,7 +13,7 @@ import {
   sizeParam,
   versionParam,
 } from "./schemas.js";
-import { RO, WRITE, deepMergePatch, mergeAddresses, pagedResult, text } from "./shared.js";
+import { RO, WRITE, deepMergePatch, mergeAddresses, pagedResult, structuredResult } from "./shared.js";
 
 /** Read tools for contacts. Always registered. */
 export function registerContactReadTools(server: McpServer, client: LexwareClient): void {
@@ -56,7 +56,7 @@ export function registerContactReadTools(server: McpServer, client: LexwareClien
     },
     async ({ id }) => {
       const contact = await client.get<Record<string, unknown>>(`/v1/contacts/${encodeURIComponent(id)}`);
-      return { structuredContent: contact, content: text(`Contact ${id} retrieved.`) };
+      return structuredResult(contact, `Contact ${id} retrieved.`);
     },
   );
 }
@@ -80,7 +80,7 @@ export function registerContactDraftTools(server: McpServer, client: LexwareClie
         version: 0,
         ...mergeBody(input, additionalFields),
       });
-      return { structuredContent: created, content: text(`Created contact ${created.id}.`) };
+      return structuredResult(created, `Created contact ${created.id}.`);
     },
   );
 
@@ -120,10 +120,7 @@ export function registerContactDraftTools(server: McpServer, client: LexwareClie
         `/v1/contacts/${encodeURIComponent(id)}`,
         { body, idempotent: false },
       );
-      return {
-        structuredContent: updated,
-        content: text(`Updated contact ${id} (now version ${updated.version}).`),
-      };
+      return structuredResult(updated, `Updated contact ${id} (now version ${updated.version}).`);
     },
   );
 }
