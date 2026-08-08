@@ -9,6 +9,7 @@ import {
   deleteIdempotent,
   mergeAddresses,
   pagedResult,
+  structuredResult,
 } from "../src/tools/shared.js";
 import { mergeBody } from "../src/tools/schemas.js";
 
@@ -197,8 +198,29 @@ describe("pagedResult", () => {
   });
 
   it("renders the real 1-based page/total for a populated set", () => {
-    const res = pagedResult(paged({ number: 1, totalPages: 3, totalElements: 70 }), "article(s)");
+    const page = paged({
+      content: [{ id: "article-1", title: "Demo" }],
+      number: 1,
+      numberOfElements: 1,
+      totalPages: 3,
+      totalElements: 70,
+    });
+    const res = pagedResult(page, "article(s)");
     expect(res.content[0].text).toBe("Found 70 article(s); showing page 2/3.");
+    expect(JSON.parse(res.content[1].text)).toEqual(page);
+  });
+});
+
+describe("structuredResult", () => {
+  it("keeps structuredContent and adds a serialized JSON text fallback", () => {
+    const payload = { id: "contact-1", company: { name: "Demo GmbH" } };
+    const res = structuredResult(payload, "Contact retrieved.");
+
+    expect(res.structuredContent).toEqual(payload);
+    expect(res.content).toEqual([
+      { type: "text", text: "Contact retrieved." },
+      { type: "text", text: JSON.stringify(payload) },
+    ]);
   });
 });
 
@@ -213,7 +235,8 @@ describe("binaryResult", () => {
       message: "Downloaded file f1.",
     });
     expect(res.content[0]).toEqual({ type: "text", text: "Downloaded file f1." });
-    expect(res.content[1]).toEqual({
+    expect(res.content[1]).toEqual({ type: "text", text: JSON.stringify({ fileId: "f1" }) });
+    expect(res.content[2]).toEqual({
       type: "resource",
       resource: {
         uri: "lexware://files/f1",
