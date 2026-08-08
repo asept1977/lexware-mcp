@@ -2,7 +2,7 @@ import type { McpServer } from "skybridge/server";
 import { z } from "zod";
 import type { LexwareClient } from "../lexware/client.js";
 import { additionalFieldsParam, mergeBody, versionParam, voucherInputShape, voucherUpdateShape } from "./schemas.js";
-import { WRITE, decodeBase64Strict, deepMergePatch, text } from "./shared.js";
+import { WRITE, decodeBase64Strict, deepMergePatch, structuredResult } from "./shared.js";
 
 /** Voucher statuses lexoffice DERIVES from payments — re-sending them on PUT is rejected (invalid_value). */
 const DERIVED_VOUCHER_STATUSES = new Set(["paid", "paidoff", "voided", "transferred", "sepadebit"]);
@@ -31,7 +31,7 @@ export function registerVoucherWriteTools(server: McpServer, client: LexwareClie
         body.useCollectiveContact = false;
       }
       const created = await client.post<{ id: string }>("/v1/vouchers", body);
-      return { structuredContent: created, content: text(`Created voucher ${created.id}.`) };
+      return structuredResult(created, `Created voucher ${created.id}.`);
     },
   );
 
@@ -87,10 +87,7 @@ export function registerVoucherWriteTools(server: McpServer, client: LexwareClie
         `/v1/vouchers/${encodeURIComponent(id)}`,
         { body, idempotent: false },
       );
-      return {
-        structuredContent: updated,
-        content: text(`Updated voucher ${id} (now version ${updated.version}).`),
-      };
+      return structuredResult(updated, `Updated voucher ${id} (now version ${updated.version}).`);
     },
   );
 
@@ -115,10 +112,7 @@ export function registerVoucherWriteTools(server: McpServer, client: LexwareClie
         `/v1/vouchers/${encodeURIComponent(id)}/files`,
         { bytes, filename, contentType: mimeType },
       );
-      return {
-        structuredContent: result,
-        content: text(`Attached ${filename} to voucher ${id}.`),
-      };
+      return structuredResult(result, `Attached ${filename} to voucher ${id}.`);
     },
   );
 }
