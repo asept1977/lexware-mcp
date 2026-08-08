@@ -1,7 +1,7 @@
 import type { McpServer } from "skybridge/server";
 import { z } from "zod";
 import type { LexwareClient } from "../lexware/client.js";
-import { DESTRUCTIVE, RO, text, WRITE, deleteIdempotent } from "./shared.js";
+import { DESTRUCTIVE, RO, WRITE, deleteIdempotent, structuredResult } from "./shared.js";
 
 /** Read tools for event subscriptions (webhooks). Always registered. */
 export function registerEventSubscriptionReadTools(server: McpServer, client: LexwareClient): void {
@@ -13,7 +13,7 @@ export function registerEventSubscriptionReadTools(server: McpServer, client: Le
     },
     async () => {
       const data = await client.get<unknown>("/v1/event-subscriptions");
-      return { structuredContent: { data }, content: text("Retrieved event subscriptions.") };
+      return structuredResult({ data }, "Retrieved event subscriptions.");
     },
   );
 
@@ -26,7 +26,7 @@ export function registerEventSubscriptionReadTools(server: McpServer, client: Le
     },
     async ({ id }) => {
       const sub = await client.get<Record<string, unknown>>(`/v1/event-subscriptions/${encodeURIComponent(id)}`);
-      return { structuredContent: sub, content: text(`Event subscription ${id} retrieved.`) };
+      return structuredResult(sub, `Event subscription ${id} retrieved.`);
     },
   );
 }
@@ -62,10 +62,7 @@ export function registerEventSubscriptionWriteTools(server: McpServer, client: L
         { eventType, callbackUrl },
       );
       const id = created.subscriptionId ?? created.id ?? "";
-      return {
-        structuredContent: created,
-        content: text(`Created event subscription ${id} for ${eventType}.`),
-      };
+      return structuredResult(created, `Created event subscription ${id} for ${eventType}.`);
     },
   );
 }
@@ -89,14 +86,12 @@ export function registerEventSubscriptionDeleteTools(server: McpServer, client: 
         client,
         `/v1/event-subscriptions/${encodeURIComponent(id)}`,
       );
-      return {
-        structuredContent: { id, deleted: true, alreadyAbsent },
-        content: text(
-          alreadyAbsent
-            ? `Event subscription ${id} was already absent (nothing to delete).`
-            : `Deleted event subscription ${id}.`,
-        ),
-      };
+      return structuredResult(
+        { id, deleted: true, alreadyAbsent },
+        alreadyAbsent
+          ? `Event subscription ${id} was already absent (nothing to delete).`
+          : `Deleted event subscription ${id}.`,
+      );
     },
   );
 }
