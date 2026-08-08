@@ -1,7 +1,7 @@
 import type { McpServer } from "skybridge/server";
 import { z } from "zod";
 import type { LexwareClient } from "../lexware/client.js";
-import { RO, WRITE, binaryResult, decodeBase64Strict, text } from "./shared.js";
+import { RO, WRITE, binaryResult, decodeBase64Strict, structuredResult } from "./shared.js";
 
 /** Read tools for the file store. Always registered. */
 export function registerFileReadTools(server: McpServer, client: LexwareClient): void {
@@ -64,10 +64,7 @@ export function registerFileWriteTools(server: McpServer, client: LexwareClient)
         { bytes, filename, contentType: mimeType },
         { type },
       );
-      return {
-        structuredContent: created,
-        content: text(`Uploaded file ${created.id} (${filename}).`),
-      };
+      return structuredResult(created, `Uploaded file ${created.id} (${filename}).`);
     },
   );
 }
