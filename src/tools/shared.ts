@@ -21,15 +21,16 @@ export function text(message: string): [{ type: "text"; text: string }] {
  * Return machine-readable data together with a JSON text fallback.
  *
  * `structuredContent` is the canonical payload for modern MCP clients. The MCP
- * specification also recommends serializing that payload into a TextContent
- * block for backwards compatibility. Keeping the human-readable summary as the
- * first block preserves the existing UX, while the second block lets text-only
- * clients consume ids, line items, amounts, and other structured fields.
+ * specification also recommends serializing that payload into TextContent for
+ * backwards compatibility. Some clients only forward the first content block
+ * to the model, so the summary and JSON deliberately share that first block.
+ * This lets those clients consume ids, line items, amounts, and other fields
+ * without a second tool call or a client-specific prompt.
  */
 export function structuredResult<T extends object>(structuredContent: T, message: string) {
   return {
     structuredContent,
-    content: [...text(message), ...text(JSON.stringify(structuredContent))],
+    content: text(`${message}\n\n${JSON.stringify(structuredContent)}`),
   };
 }
 
@@ -71,8 +72,7 @@ export function binaryResult(opts: {
   return {
     structuredContent: opts.structuredContent,
     content: [
-      ...text(opts.message),
-      ...text(JSON.stringify(opts.structuredContent)),
+      ...text(`${opts.message}\n\n${JSON.stringify(opts.structuredContent)}`),
       embeddedResourceBlock(opts.uri, opts.contentType, opts.data),
     ],
   };
